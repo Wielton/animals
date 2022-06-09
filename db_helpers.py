@@ -29,45 +29,38 @@ def run_query(statement, args=None):
         if statement.startswith("SELECT"):
             cursor.execute(statement, args)
             result = cursor.fetchall()
+            print("Total of {} animals".format(cursor.rowcount))
             return result
-            
-            # Get the first person from the results list, then retrieve the 2nd index(column) from that row
-            # print(result[0][1])
-        
-        else:
-            cursor.execute(statement, args)
-            if cursor.rowcount == 1:
+        elif statement.startswith("POST"):
+            if ("CONSTRAINT `animals_CHECK_animal_name`" in e.msg):
+                print("Error, animal already exists!")
+            else:
                 conn.commit()
                 print("Query successful")
-            else:
-                print("Query failed")
-    
-    except mariadb.OperationalError as e: # This will allow to print the exception as it happens
-        print("Got an operational error")
-        if ("Access Denied" in e.msg):
-            print("Failed to log in")
-    
-    # except mariadb.IntegrityError as e: # I NEED TO SET CONSTRAINTS FIRST
-    #         print("Integrity error")
-    #         print(e.msg)
-    
-    except mariadb.ProgrammingError as e:
-        if("SQL syntax" in e.msg):
-            print("Apparently you cannot run program")
+        elif statement.startswith("UPDATE"):
+            cursor.execute(statement, args)
+            conn.commit()
+            print("Animal successfully updated")
         else:
-            print("Got a different programming error")
+            cursor.execute(statement, args)
+            conn.commit()
+            print("Animal successfully deleted from database")
+    except mariadb.IntegrityError as e:
+        print("Integrity error")
+        if ("CONSTRAINT `animals_CHECK_animal_name`" in e.msg):
+            print("Error, animal already exists!")
+        else:
             print(e.msg)
+            
+    except mariadb.ProgrammingError as e:
+        print(e.msg)
 
     except RuntimeError as e:
-        print("Caught a runtime error")
         print(e.msg)
+        
 
     except Exception as e:
-        print(e.with_traceback)
         print(e.msg)
-        # Better if solution:
-        if ("Access denied" in e.msg):
-            print("Failed to login")
-            print(e.msg)
+
     finally:
-        disconnect_db(conn, cursor)
+        disconnect_db(conn,cursor)

@@ -1,82 +1,82 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, Response
 import json
-from db_helpers import run_query
+import db_helpers
 
 
 app = Flask(__name__)
 
 @app.route('/')
-def new_animal():
-    return render_template('index.html')
+def homepage():
+    print(request)
+    return "Hello World people"
 
-
-# @app.route('/')
-# def new_animal_form():
-#     text = request.form['text']
-#     return text
-# This request is a general approach and not only for json
-# @app.route('/users')
-# def users():
-#     print(request)
-#     login_dictionary = {"loginToken" : "abc123"}
-#     user_list = [
-#         {"id" : 1, "name" : "John"},
-#         {"id" : 2, "name" : "Jill"}
-#     ]
-#     print(json.dumps(login_dictionary))
-#     return Response(json.dumps(user_list, default=str), mimetype="application/json", status=200)
-
-# These are api calls
-# Just specify a call to an API endpoint in these functions
-# @app.post('/users')
-# def users_post():
-#     login_dictionary = {"loginToken" : "abc123"}
-#     return Response(json.dumps(login_dictionary, default=str), mimetype="application/json", status=200)
-
-# @app.get('/users')
-# def users_get():
-#     user_list = [
-#         {"id" : 1, "name" : "John"},
-#         {"id" : 2, "name" : "Jill"}
-#     ]
-#     return Response(json.dumps(user_list, default=str), mimetype="application/json", status=200)
 
 
 # Let's create a new request in just a json format which is easier, using jsonify
-animals = ['cat', 'dog', 'bird', 'amphibian', 'fish']
 
-@app.route('/api/animals')
+@app.get('/api/animals')
 def animals_get():
-    query_result = run_query("SELECT animal_name FROM animals")
+    params = request.args
+    print("Arguments for the GET"+ str(params))
+    animal_id = params.get('id')
+    print(animal_id)
+    if animal_id:
+        query_result = db_helpers.run_query("SELECT id, animal_name from animals WHERE id=?",[animal_id])
+    else:
+        query_result = db_helpers.run_query("SELECT id, animal_name from animals ORDER BY id ASC")
     animals_list = []
     for animal in query_result:
-        animals_list.append(animal[0])
+        animals_list.append(animal[1])
     resp = {"Animals" : animals_list}
     return jsonify(resp), 200
 
 
 @app.post('/api/animals')
-def new_animal_post(new_animal):
+def animal_post():
     animal_data = request.json
-    run_query("INSERT INTO animals(animal_name) VALUES (?)", [new_animal])
-    return "Successfully added"
+    print(animal_data)
+    if not animal_data.get('animal_name'):
+        return jsonify("Missing required field: animal name"), 422
+    for animal in animal_data:
+        if animal_data.get('animal_name') == animal[0]:
+            return jsonify("Animal already exists")
+    db_helpers.run_query("INSERT INTO animals (animal_name) VALUES(?)", 
+                        [animal_data.get('animal_name')])
+    # Some database operations that create the user
+    # More DB operations that generate a login token
+    
+    # return Response(json.dumps(login_dictionary, default=str), mimetype="application/json", status=201)
+    # Above and below are equivalent
+    return jsonify("Thanks, the animal was added to the database!")
 
-# @app.update('/api/animals')
-# def animal_update():
-#     animals = run_query("SELECT animal_name FROM animals")
-#     for animal in animals:
-#         if new_animal == animal:
-#             return jsonify("That animal already exists")
-#         else:
-#             run_query("INSERT INTO animals(animal_name) VALUES (?)", [new_animal])
-#             return jsonify("{} was successfully added to the database".format[new_animal])
-        
-# @app.delete('/api/animals')
+@app.post('/api/animals')
+def animal_patch():
+    params = request.args
+    print("Arguments for the GET"+ str(params))
+    animal_id = params.get('id')
+    animals_name = params.get('animal_name')
+    print(animal_id)
+    if animal_id:
+        db_helpers.run_query("UPDATE animals SET animal_name WHERE animal_name=?",[animals_name])
+        if not animals_name:
+            return jsonify("Missing required field: animal name"), 422
+        else:
+            return jsonify("Animal has been updated")
+    else:
+        return jsonify("That animal doesn't exist.")
+    
+# @app.post('/api/animals')
 # def animal_delete():
-#     animals = run_query("SELECT animal_name FROM animals")
-#     for animal in animals:
-#         if new_animal == animal:
-#             return jsonify("That animal already exists")
+#     params = request.args
+#     print("Arguments for the GET"+ str(params))
+#     animal_id = params.get('id')
+#     animals_name = params.get('animal_name')
+#     print(animal_id)
+#     if animal_id:
+#         db_helpers.run_query("UPDATE animals SET animal_name WHERE ")
+#         if not animals_name:
+#             return jsonify("Missing required field: animal name"), 422
 #         else:
-#             run_query("INSERT INTO animals(animal_name) VALUES (?)", [new_animal])
-#             return jsonify("{} was successfully added to the database".format[new_animal])
+#             return jsonify("Animal has been updated")
+#     else:
+#         return jsonify("That animal doesn't exist.")
